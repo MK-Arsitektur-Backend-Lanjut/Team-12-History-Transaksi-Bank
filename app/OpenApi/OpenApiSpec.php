@@ -1,0 +1,116 @@
+<?php
+
+namespace App\OpenApi;
+
+use OpenApi\Attributes as OA;
+
+#[OA\Info(
+    version: '1.0.0',
+    title: 'Team 12 - Account Management API',
+    description: 'API for account profile, status management, and atomic balance update.'
+)]
+#[OA\Server(
+    url: 'http://127.0.0.1:8000',
+    description: 'Local development server'
+)]
+#[OA\Schema(
+    schema: 'Account',
+    type: 'object',
+    required: ['id', 'account_number', 'customer_name', 'email', 'status', 'balance'],
+    properties: [
+        new OA\Property(property: 'id', type: 'integer', example: 1),
+        new OA\Property(property: 'account_number', type: 'string', example: 'ACC202604151234560001'),
+        new OA\Property(property: 'customer_name', type: 'string', example: 'Budi Santoso'),
+        new OA\Property(property: 'email', type: 'string', format: 'email', example: 'budi@example.com'),
+        new OA\Property(property: 'phone', type: 'string', nullable: true, example: '08123456789'),
+        new OA\Property(property: 'address', type: 'string', nullable: true, example: 'Bandung'),
+        new OA\Property(property: 'status', type: 'string', enum: ['active', 'inactive', 'blocked'], example: 'active'),
+        new OA\Property(property: 'balance', type: 'number', format: 'float', example: 150000.00),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2026-04-15T10:00:00Z'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2026-04-15T10:00:00Z')
+    ]
+)]
+#[OA\Schema(
+    schema: 'CreateAccountRequest',
+    type: 'object',
+    required: ['customer_name', 'email'],
+    properties: [
+        new OA\Property(property: 'customer_name', type: 'string', maxLength: 100, example: 'Budi Santoso'),
+        new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 150, example: 'budi@example.com'),
+        new OA\Property(property: 'phone', type: 'string', maxLength: 30, nullable: true, example: '08123456789'),
+        new OA\Property(property: 'address', type: 'string', nullable: true, example: 'Bandung'),
+        new OA\Property(property: 'status', type: 'string', enum: ['active', 'inactive', 'blocked'], example: 'active'),
+        new OA\Property(property: 'balance', type: 'number', format: 'float', minimum: 0, example: 100000)
+    ]
+)]
+#[OA\Schema(
+    schema: 'UpdateAccountRequest',
+    type: 'object',
+    properties: [
+        new OA\Property(property: 'customer_name', type: 'string', maxLength: 100, example: 'Budi Santoso Updated'),
+        new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 150, example: 'budi.new@example.com'),
+        new OA\Property(property: 'phone', type: 'string', maxLength: 30, nullable: true, example: '0822222222'),
+        new OA\Property(property: 'address', type: 'string', nullable: true, example: 'Jakarta')
+    ]
+)]
+#[OA\Schema(
+    schema: 'UpdateAccountStatusRequest',
+    type: 'object',
+    required: ['status'],
+    properties: [
+        new OA\Property(property: 'status', type: 'string', enum: ['active', 'inactive', 'blocked'], example: 'blocked')
+    ]
+)]
+#[OA\Schema(
+    schema: 'AdjustBalanceRequest',
+    type: 'object',
+    required: ['type', 'amount'],
+    properties: [
+        new OA\Property(property: 'type', type: 'string', enum: ['debit', 'credit'], example: 'credit'),
+        new OA\Property(property: 'amount', type: 'number', format: 'float', minimum: 0.01, example: 50000)
+    ]
+)]
+#[OA\Schema(
+    schema: 'AccountDataResponse',
+    type: 'object',
+    properties: [
+        new OA\Property(property: 'data', ref: '#/components/schemas/Account')
+    ]
+)]
+#[OA\Schema(
+    schema: 'AccountMessageResponse',
+    type: 'object',
+    properties: [
+        new OA\Property(property: 'message', type: 'string', example: 'Account updated successfully.'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/Account')
+    ]
+)]
+#[OA\Schema(
+    schema: 'PaginatedAccountsResponse',
+    type: 'object',
+    properties: [
+        new OA\Property(property: 'current_page', type: 'integer', example: 1),
+        new OA\Property(property: 'per_page', type: 'integer', example: 15),
+        new OA\Property(property: 'total', type: 'integer', example: 120),
+        new OA\Property(property: 'last_page', type: 'integer', example: 8),
+        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Account'))
+    ]
+)]
+#[OA\Schema(
+    schema: 'ErrorResponse',
+    type: 'object',
+    properties: [
+        new OA\Property(property: 'message', type: 'string', example: 'The given data was invalid.'),
+        new OA\Property(
+            property: 'errors',
+            type: 'object',
+            additionalProperties: new OA\AdditionalProperties(
+                type: 'array',
+                items: new OA\Items(type: 'string')
+            )
+        )
+    ]
+)]
+class OpenApiSpec
+{
+}
