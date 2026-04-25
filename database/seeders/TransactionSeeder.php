@@ -38,7 +38,7 @@ class TransactionSeeder extends Seeder
                         'type' => $type,
                         'amount' => $amount,
                         'balance_after' => $balanceAfter,
-                        'created_at' => $baseDate->addSeconds(rand(0, 63072000)),
+                        'created_at' => (clone $baseDate)->addSeconds(rand(0, 63072000)),
                         'updated_at' => now(),
                     ];
                 }
