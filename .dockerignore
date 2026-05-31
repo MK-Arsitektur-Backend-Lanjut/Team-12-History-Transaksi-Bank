@@ -9,3 +9,13 @@ storage/framework/cache/data
 storage/framework/sessions
 storage/framework/testing
 storage/framework/views
+vendor
+node_modules
+.env
+.git
+storage/*.key
+storage/app/public
+storage/framework/cache/data
+storage/logs
+tests
+.vscode

@@ -12,3 +12,8 @@ Route::prefix('accounts')->group(function () {
     Route::patch('/{account}/status', [AccountController::class, 'updateStatus']);
     Route::post('/{account}/balance/adjust', [AccountController::class, 'adjustBalance']);
 });
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\StatementController;
+
+Route::get('/statements', [StatementController::class, 'index']);
+Route::get('/statements/export', [StatementController::class, 'export']);

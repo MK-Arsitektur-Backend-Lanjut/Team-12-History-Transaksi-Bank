@@ -32,4 +32,20 @@ class Transaction extends Model
     {
         return $this->belongsTo(Account::class);
     }
+    protected $table = 'transactions';
+
+    protected $fillable = [
+        'account_id',
+        'type',
+        'amount',
+        'balance_after',
+        'transaction_date',
+        'description',
+    ];
+
+    protected $casts = [
+        'transaction_date' => 'datetime',
+        'amount' => 'decimal:2',
+        'balance_after' => 'decimal:2',
+    ];
 }
