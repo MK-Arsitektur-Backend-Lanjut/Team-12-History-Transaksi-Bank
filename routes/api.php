@@ -1,6 +1,4 @@
 <?php
-
-
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\StatementController;
 use Illuminate\Support\Facades\Route;
