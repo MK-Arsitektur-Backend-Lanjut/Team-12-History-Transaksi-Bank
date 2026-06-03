@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StatementRequest;
 use App\Http\Resources\TransactionResource;
 use App\Repositories\StatementRepositoryInterface;
+use App\Http\Resources\AccountResource;
+use App\Services\Account\AccountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -14,10 +16,12 @@ use OpenApi\Attributes as OA;
 class StatementController extends Controller
 {
     private StatementRepositoryInterface $repo;
+    private AccountService $accountService;
 
-    public function __construct(StatementRepositoryInterface $repo)
+    public function __construct(StatementRepositoryInterface $repo, AccountService $accountService)
     {
         $this->repo = $repo;
+        $this->accountService = $accountService;
     }
 
     #[OA\Get(
@@ -80,15 +84,23 @@ class StatementController extends Controller
 
         $summary = $this->repo->getSummaryTotals($accountId, $start, $end);
 
+        // fetch account profile via AccountService (uses repository pattern)
+        $account = $this->accountService->find($accountId);
+
+        if (! $account) {
+            return response()->json(['message' => 'Account not found.'], 404);
+        }
+
         return response()->json([
-            'data' => TransactionResource::collection($paginator->getCollection()),
+            'account' => new AccountResource($account),
+            'summary' => $summary,
+            'transactions' => TransactionResource::collection($paginator->getCollection()),
             'meta' => [
                 'current_page' => $paginator->currentPage(),
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
                 'last_page' => $paginator->lastPage(),
             ],
-            'summary' => $summary,
         ]);
     }
 
@@ -130,17 +142,53 @@ class StatementController extends Controller
         $end = $data['end_date'];
         $accountId = (int) $data['account_id'];
 
-        $fileName = sprintf('statement_%d_%s_%s.csv', $accountId, str_replace(':', '-', $start), str_replace(':', '-', $end));
+        // try to include account_number in filename for clarity
+        $account = $this->accountService->find($accountId);
+        $accountName = $account ? $account->account_number : (string) $accountId;
+
+        $fileName = sprintf('statement_%s_%s_%s.csv', $accountName, str_replace(':', '-', $start), str_replace(':', '-', $end));
 
         $response = new StreamedResponse(function () use ($accountId, $start, $end) {
             $handle = fopen('php://output', 'w');
+
+            // account header
+            $acct = $this->accountService->find($accountId);
+            if ($acct) {
+                fputcsv($handle, ['Account Number', $acct->account_number]);
+                fputcsv($handle, ['Customer Name', $acct->customer_name]);
+                fputcsv($handle, ['Email', $acct->email]);
+                fputcsv($handle, []);
+            }
+
+            // column headers
             fputcsv($handle, ['transaction_date', 'type', 'amount', 'balance_after', 'description']);
 
-            $this->repo->streamByAccountDate($accountId, $start, $end, 1000, function ($chunk) use ($handle) {
+            // stream rows and format numbers
+            $totalCredit = 0;
+            $totalDebit = 0;
+
+            $this->repo->streamByAccountDate($accountId, $start, $end, 1000, function ($chunk) use ($handle, &$totalCredit, &$totalDebit) {
                 foreach ($chunk as $row) {
-                    fputcsv($handle, [$row['transaction_date'], $row['type'], $row['amount'], $row['balance_after'], $row['description']]);
+                    $amount = is_null($row['amount']) ? '' : number_format((float)$row['amount'], 2, '.', '');
+                    $balance = is_null($row['balance_after']) ? '' : number_format((float)$row['balance_after'], 2, '.', '');
+
+                    // accumulate totals by type
+                    $t = strtolower($row['type'] ?? '');
+                    if (in_array($t, ['credit', 'kredit'])) {
+                        $totalCredit += (float) $row['amount'];
+                    } elseif ($t === 'debit') {
+                        $totalDebit += (float) $row['amount'];
+                    }
+
+                    fputcsv($handle, [$row['transaction_date'], $row['type'], $amount, $balance, $row['description']]);
                 }
             });
+
+            // blank line then summary
+            fputcsv($handle, []);
+            fputcsv($handle, ['Summary']);
+            fputcsv($handle, ['total_credit', number_format($totalCredit, 2, '.', '')]);
+            fputcsv($handle, ['total_debit', number_format($totalDebit, 2, '.', '')]);
 
             fclose($handle);
         });

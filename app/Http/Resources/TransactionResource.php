@@ -13,7 +13,7 @@ class TransactionResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'transaction_date' => $this->transaction_date->toDateTimeString(),
+            'transaction_date' => ($this->transaction_date ?? $this->created_at) ? ($this->transaction_date ?? $this->created_at)->toDateTimeString() : null,
             'type' => $this->type,
             'amount' => (float) $this->amount,
             'balance_after' => $this->balance_after !== null ? (float) $this->balance_after : null,
