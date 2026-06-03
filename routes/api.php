@@ -12,3 +12,4 @@ Route::prefix('accounts')->group(function () {
     Route::patch('/{account}/status', [AccountController::class, 'updateStatus']);
     Route::post('/{account}/balance/adjust', [AccountController::class, 'adjustBalance']);
 });
+
