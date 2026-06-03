@@ -7,7 +7,7 @@ use OpenApi\Attributes as OA;
 #[OA\Info(
     version: '1.0.0',
     title: 'Team 12 - Account Management API',
-    description: 'API for account profile, status management, and atomic balance update.'
+    description: 'Comprehensive API for account management, transaction logging, and statement generation. Supports account CRUD operations, atomic balance updates, transaction history tracking, and statement export functionality.'
 )]
 #[OA\Server(
     url: 'http://127.0.0.1:8000',
@@ -109,6 +109,22 @@ use OpenApi\Attributes as OA;
                 items: new OA\Items(type: 'string')
             )
         )
+    ]
+)]
+#[OA\Schema(
+    schema: 'Transaction',
+    type: 'object',
+    required: ['id', 'account_id', 'reference_number', 'type', 'amount', 'balance_after'],
+    properties: [
+        new OA\Property(property: 'id', type: 'integer', example: 1),
+        new OA\Property(property: 'account_id', type: 'integer', example: 1),
+        new OA\Property(property: 'reference_number', type: 'string', format: 'uuid', example: '550E8400-E29B-41D4-A716-446655440000'),
+        new OA\Property(property: 'type', type: 'string', enum: ['debit', 'kredit'], example: 'kredit'),
+        new OA\Property(property: 'amount', type: 'number', format: 'float', example: 100000.00),
+        new OA\Property(property: 'balance_after', type: 'number', format: 'float', example: 100000.00),
+        new OA\Property(property: 'description', type: 'string', nullable: true, example: 'Transaction description'),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2026-04-15T10:00:00Z'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2026-04-15T10:00:00Z')
     ]
 )]
 class OpenApiSpec

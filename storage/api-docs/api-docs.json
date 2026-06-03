@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Team 12 - Account Management API",
-        "description": "API for account profile, status management, and atomic balance update.",
+        "description": "Comprehensive API for account management, transaction logging, and statement generation. Supports account CRUD operations, atomic balance updates, transaction history tracking, and statement export functionality.",
         "version": "1.0.0"
     },
     "servers": [
@@ -317,6 +317,268 @@
                     }
                 }
             }
+        },
+        "/api/statements": {
+            "get": {
+                "tags": [
+                    "Statements"
+                ],
+                "summary": "Get account statement",
+                "description": "Retrieves transaction history for a specific account within a date range with pagination support. Includes summary totals for debit and credit transactions.",
+                "operationId": "f3d3a89fdad525e9ac50fabf65ccbfcb",
+                "parameters": [
+                    {
+                        "name": "account_id",
+                        "in": "query",
+                        "description": "Account ID to retrieve statements for",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "description": "Start date for statement period (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "description": "End date for statement period (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page (default: 15, max: 100)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statement retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Transaction"
+                                            }
+                                        },
+                                        "meta": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "example": 15
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 50
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "example": 4
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "summary": {
+                                            "properties": {
+                                                "total_credit": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 150000
+                                                },
+                                                "total_debit": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 50000
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error - invalid date range or missing parameters",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/statements/export": {
+            "get": {
+                "tags": [
+                    "Statements"
+                ],
+                "summary": "Export account statement as CSV",
+                "description": "Generates and streams a CSV file containing transaction history for a specific account within a date range. Ideal for record-keeping and external reporting with efficient streaming.",
+                "operationId": "e911bd9aefb25d3a41ed7c14a7aacd5f",
+                "parameters": [
+                    {
+                        "name": "account_id",
+                        "in": "query",
+                        "description": "Account ID to export statements for",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "description": "Export start date (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "description": "Export end date (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CSV file exported successfully",
+                        "content": {
+                            "text/csv": {
+                                "schema": {
+                                    "description": "CSV file with columns: transaction_date, type, amount, balance_after, description",
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error - invalid date range or missing parameters",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/transactions": {
+            "post": {
+                "tags": [
+                    "Transactions"
+                ],
+                "summary": "Create transaction log",
+                "description": "Records a new transaction for an account with debit or credit operation. Automatically calculates and updates balance with transaction history tracking.",
+                "operationId": "ab765dced58cfe2f620929db31452145",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "account_id",
+                                    "type",
+                                    "amount"
+                                ],
+                                "properties": {
+                                    "account_id": {
+                                        "description": "Account ID",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "type": {
+                                        "description": "Transaction type",
+                                        "type": "string",
+                                        "example": "kredit",
+                                        "enum": [
+                                            "debit",
+                                            "kredit"
+                                        ]
+                                    },
+                                    "amount": {
+                                        "description": "Transaction amount",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 100000,
+                                        "minimum": 0.01
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Transaction created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "transaction": {
+                                            "$ref": "#/components/schemas/Transaction"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error or insufficient balance",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -562,6 +824,65 @@
                     }
                 },
                 "type": "object"
+            },
+            "Transaction": {
+                "required": [
+                    "id",
+                    "account_id",
+                    "reference_number",
+                    "type",
+                    "amount",
+                    "balance_after"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "account_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "reference_number": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550E8400-E29B-41D4-A716-446655440000"
+                    },
+                    "type": {
+                        "type": "string",
+                        "example": "kredit",
+                        "enum": [
+                            "debit",
+                            "kredit"
+                        ]
+                    },
+                    "amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 100000
+                    },
+                    "balance_after": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 100000
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Transaction description",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:00:00Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:00:00Z"
+                    }
+                },
+                "type": "object"
             }
         }
     },
@@ -569,6 +890,14 @@
         {
             "name": "Accounts",
             "description": "Account Management API"
+        },
+        {
+            "name": "Statements",
+            "description": "Statement Generator API"
+        },
+        {
+            "name": "Transactions",
+            "description": "Transaction Logging API"
         }
     ]
 }
