@@ -50,34 +50,42 @@ class TransactionController extends Controller
     {
         $validated = $request->validate([
             'account_id' => 'required|integer',
-            'type' => 'required|in:debit,kredit',
-            'amount' => 'required|numeric|min:1',
+            'type' => 'required|in:debit,credit,kredit',
+            'amount' => 'required|numeric|min:0.01',
         ]);
 
         return DB::transaction(function () use ($validated) {
+            // Normalisasi tipe transaksi (terima 'kredit' sebagai 'credit')
+            $type = strtolower($validated['type']);
+            if ($type === 'kredit') {
+                $type = 'credit';
+            }
+
             // Ambil saldo terakhir
             $last = Transaction::where('account_id', $validated['account_id'])
                 ->orderByDesc('id')->first();
             $lastBalance = $last ? $last->balance_after : 0;
 
             // Validasi saldo cukup jika debit
-            if ($validated['type'] === 'debit' && $lastBalance < $validated['amount']) {
+            if ($type === 'debit' && $lastBalance < $validated['amount']) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Saldo tidak cukup.'
                 ], 422);
             }
 
-            $newBalance = $validated['type'] === 'debit'
+            $newBalance = $type === 'debit'
                 ? $lastBalance - $validated['amount']
                 : $lastBalance + $validated['amount'];
 
             $transaction = Transaction::create([
                 'account_id' => $validated['account_id'],
-                'reference_number' => strtoupper(Str::uuid()),
-                'type' => $validated['type'],
+                'reference_number' => strtoupper((string) Str::uuid()),
+                'type' => $type,
                 'amount' => $validated['amount'],
+                'balance_before' => $lastBalance,
                 'balance_after' => $newBalance,
+                'transacted_at' => now(),
             ]);
 
             return response()->json([
