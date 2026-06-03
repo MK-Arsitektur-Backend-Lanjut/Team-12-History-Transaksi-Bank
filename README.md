@@ -56,3 +56,59 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Docker Setup (Laravel + Nginx + MySQL)
+
+Project ini sudah disiapkan agar bisa berjalan di Docker sesuai ketentuan tugas.
+
+### 1) Build dan jalankan container
+
+```bash
+docker compose up -d --build
+```
+
+### 2) Install dependency PHP di container
+
+```bash
+docker compose exec app composer install
+```
+
+### 3) Inisialisasi aplikasi
+
+```bash
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate
+```
+
+### 4) Akses aplikasi
+
+- App: `http://localhost:8000`
+- Swagger UI: `http://localhost:8000/api/documentation`
+
+### 5) Perintah bantu
+
+```bash
+docker compose ps
+docker compose logs -f web
+docker compose logs -f app
+docker compose down
+```
+
+Catatan:
+- Konfigurasi environment untuk container ada di file `.env.docker`.
+- Mapping port MySQL container adalah `3309:3306`.
+
+## Seeder Beban Data Transaksi
+
+Seeder `TransactionLoadSeeder` dibuat untuk memenuhi syarat minimal `50.000` transaksi per rekening.
+
+Perintah menjalankan seeder (dalam Docker):
+
+```bash
+docker compose exec app php artisan migrate:fresh --seed
+```
+
+Parameter opsional (via environment container):
+
+- `SEED_ACCOUNTS_COUNT` (default: `1`)
+- `SEED_TRANSACTIONS_PER_ACCOUNT` (default: `50000`, otomatis dipaksa minimal `50000`)

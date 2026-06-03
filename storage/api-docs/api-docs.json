@@ -1,0 +1,574 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Team 12 - Account Management API",
+        "description": "API for account profile, status management, and atomic balance update.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:8000",
+            "description": "Local development server"
+        }
+    ],
+    "paths": {
+        "/api/accounts": {
+            "get": {
+                "tags": [
+                    "Accounts"
+                ],
+                "summary": "List accounts",
+                "description": "Get paginated list of bank accounts.",
+                "operationId": "1f1ea4d0ec24f55da316f8a01a4773e6",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of records per page.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Accounts fetched successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedAccountsResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Accounts"
+                ],
+                "summary": "Create account",
+                "description": "Create a new customer bank account.",
+                "operationId": "ab9a4fc50a7da5bcc14d51103505fa1d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateAccountRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Account created successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccountMessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/accounts/{account}": {
+            "get": {
+                "tags": [
+                    "Accounts"
+                ],
+                "summary": "Get account detail",
+                "description": "Get account detail by account id.",
+                "operationId": "e9a751de46d3030241bc5d81d06988c6",
+                "parameters": [
+                    {
+                        "name": "account",
+                        "in": "path",
+                        "description": "Account id.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Account detail fetched successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccountDataResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Account not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Accounts"
+                ],
+                "summary": "Update account profile",
+                "description": "Update account profile fields such as name, email, phone, and address.",
+                "operationId": "91859f8ffc9f41d9a391d271d5a95f3a",
+                "parameters": [
+                    {
+                        "name": "account",
+                        "in": "path",
+                        "description": "Account id.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateAccountRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Account updated successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccountMessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Account not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/accounts/{account}/status": {
+            "patch": {
+                "tags": [
+                    "Accounts"
+                ],
+                "summary": "Update account status",
+                "description": "Update account status to active, inactive, or blocked.",
+                "operationId": "862de7ec079fb167e09b25010ee1d2e0",
+                "parameters": [
+                    {
+                        "name": "account",
+                        "in": "path",
+                        "description": "Account id.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateAccountStatusRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Account status updated successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccountMessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Account not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/accounts/{account}/balance/adjust": {
+            "post": {
+                "tags": [
+                    "Accounts"
+                ],
+                "summary": "Adjust account balance",
+                "description": "Adjust account balance atomically using credit or debit operation.",
+                "operationId": "3aed8fe79f35b2cd60c027d12af815cb",
+                "parameters": [
+                    {
+                        "name": "account",
+                        "in": "path",
+                        "description": "Account id.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdjustBalanceRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Balance adjusted successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccountMessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Account not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation or business rule error.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Account": {
+                "required": [
+                    "id",
+                    "account_number",
+                    "customer_name",
+                    "email",
+                    "status",
+                    "balance"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "account_number": {
+                        "type": "string",
+                        "example": "ACC202604151234560001"
+                    },
+                    "customer_name": {
+                        "type": "string",
+                        "example": "Budi Santoso"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "budi@example.com"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "08123456789",
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "Bandung",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "active",
+                        "enum": [
+                            "active",
+                            "inactive",
+                            "blocked"
+                        ]
+                    },
+                    "balance": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 150000
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:00:00Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:00:00Z"
+                    }
+                },
+                "type": "object"
+            },
+            "CreateAccountRequest": {
+                "required": [
+                    "customer_name",
+                    "email"
+                ],
+                "properties": {
+                    "customer_name": {
+                        "type": "string",
+                        "example": "Budi Santoso",
+                        "maxLength": 100
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "budi@example.com",
+                        "maxLength": 150
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "08123456789",
+                        "nullable": true,
+                        "maxLength": 30
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "Bandung",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "active",
+                        "enum": [
+                            "active",
+                            "inactive",
+                            "blocked"
+                        ]
+                    },
+                    "balance": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 100000,
+                        "minimum": 0
+                    }
+                },
+                "type": "object"
+            },
+            "UpdateAccountRequest": {
+                "properties": {
+                    "customer_name": {
+                        "type": "string",
+                        "example": "Budi Santoso Updated",
+                        "maxLength": 100
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "budi.new@example.com",
+                        "maxLength": 150
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "0822222222",
+                        "nullable": true,
+                        "maxLength": 30
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "Jakarta",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "UpdateAccountStatusRequest": {
+                "required": [
+                    "status"
+                ],
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "example": "blocked",
+                        "enum": [
+                            "active",
+                            "inactive",
+                            "blocked"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "AdjustBalanceRequest": {
+                "required": [
+                    "type",
+                    "amount"
+                ],
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "example": "credit",
+                        "enum": [
+                            "debit",
+                            "credit"
+                        ]
+                    },
+                    "amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 50000,
+                        "minimum": 0.01
+                    }
+                },
+                "type": "object"
+            },
+            "AccountDataResponse": {
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/Account"
+                    }
+                },
+                "type": "object"
+            },
+            "AccountMessageResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "example": "Account updated successfully."
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Account"
+                    }
+                },
+                "type": "object"
+            },
+            "PaginatedAccountsResponse": {
+                "properties": {
+                    "current_page": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "per_page": {
+                        "type": "integer",
+                        "example": 15
+                    },
+                    "total": {
+                        "type": "integer",
+                        "example": 120
+                    },
+                    "last_page": {
+                        "type": "integer",
+                        "example": 8
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Account"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "ErrorResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "example": "The given data was invalid."
+                    },
+                    "errors": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "type": "object"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Accounts",
+            "description": "Account Management API"
+        }
+    ]
+}

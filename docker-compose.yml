@@ -1,0 +1,83 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: team12_app
+    working_dir: /var/www/html
+    env_file:
+      - .env.docker
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - team12_net
+
+  web:
+    image: nginx:1.27-alpine
+    container_name: team12_web
+    ports:
+      - "8000:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - team12_net
+
+  db:
+    image: mysql:8.4
+    container_name: team12_db
+    ports:
+      - "3309:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: modul_account_management
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: laravel
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - team12_net
+
+volumes:
+  dbdata:
+
+networks:
+  team12_net:
+version: '3.8'
+services:
+  app:
+    build: .
+    container_name: estatement_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html:ro
+    networks:
+      - est_net
+
+  web:
+    image: nginx:stable
+    container_name: estatement_web
+    depends_on:
+      - app
+    ports:
+      - "8000:80"
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - est_net
+
+networks:
+  est_net:
+    driver: bridge
