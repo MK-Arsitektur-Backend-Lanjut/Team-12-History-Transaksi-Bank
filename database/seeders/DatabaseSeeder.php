@@ -14,8 +14,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([
-            TransactionLoadSeeder::class,
-        ]);
+        // Panggil TransactionSeeder saja (user sudah ada dari migrasi sebelumnya)
+        $this->call(TransactionSeeder::class);
     }
 }
