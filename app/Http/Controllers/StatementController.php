@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StatementRequest;
 use App\Http\Resources\TransactionResource;
 use App\Repositories\StatementRepositoryInterface;
+use App\Http\Resources\AccountResource;
+use App\Services\Account\AccountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -15,10 +17,12 @@ use OpenApi\Attributes as OA;
 class StatementController extends Controller
 {
     private StatementRepositoryInterface $repo;
+    private AccountService $accountService;
 
-    public function __construct(StatementRepositoryInterface $repo)
+    public function __construct(StatementRepositoryInterface $repo, AccountService $accountService)
     {
         $this->repo = $repo;
+        $this->accountService = $accountService;
     }
 
     #[OA\Get(
@@ -81,15 +85,23 @@ class StatementController extends Controller
 
         $summary = $this->repo->getSummaryTotals($accountId, $start, $end);
 
+        // fetch account profile via AccountService (uses repository pattern)
+        $account = $this->accountService->find($accountId);
+
+        if (! $account) {
+            return response()->json(['message' => 'Account not found.'], 404);
+        }
+
         return response()->json([
-            'data' => TransactionResource::collection($paginator->getCollection()),
+            'account' => new AccountResource($account),
+            'summary' => $summary,
+            'transactions' => TransactionResource::collection($paginator->getCollection()),
             'meta' => [
                 'current_page' => $paginator->currentPage(),
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
                 'last_page' => $paginator->lastPage(),
             ],
-            'summary' => $summary,
         ]);
     }
 
@@ -131,17 +143,47 @@ class StatementController extends Controller
         $end = Carbon::parse($data['end_date'])->endOfDay()->toDateTimeString();
         $accountId = (int) $data['account_id'];
 
-        $fileName = sprintf('statement_%d_%s_%s.csv', $accountId, str_replace(':', '-', $start), str_replace(':', '-', $end));
+        // try to include account_number in filename for clarity
+        $account = $this->accountService->find($accountId);
+        $accountName = $account ? $account->account_number : (string) $accountId;
+
+        $fileName = sprintf('statement_%s_%s_%s.csv', $accountName, str_replace(':', '-', $start), str_replace(':', '-', $end));
 
         $response = new StreamedResponse(function () use ($accountId, $start, $end) {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['reference_number', 'transaction_date', 'type', 'amount', 'balance_before', 'balance_after', 'description']);
 
+            // account header
+            $acct = $this->accountService->find($accountId);
+            if ($acct) {
+                fputcsv($handle, ['Account Number', $acct->account_number]);
+                fputcsv($handle, ['Customer Name', $acct->customer_name]);
+                fputcsv($handle, ['Email', $acct->email]);
+                fputcsv($handle, []);
+            }
+
+            // column headers
+            fputcsv($handle, ['transaction_date', 'type', 'amount', 'balance_after', 'description']);
+
+            // stream rows and format numbers
+            // compute summary totals via repository (single aggregated query)
+            $summary = $this->repo->getSummaryTotals($accountId, $start, $end);
+
             $this->repo->streamByAccountDate($accountId, $start, $end, 1000, function ($chunk) use ($handle) {
                 foreach ($chunk as $row) {
                     fputcsv($handle, [$row['reference_number'], $row['transaction_date'], $row['type'], $row['amount'], $row['balance_before'], $row['balance_after'], $row['description']]);
+                    $amount = is_null($row['amount']) ? '' : number_format((float)$row['amount'], 2, '.', '');
+                    $balance = is_null($row['balance_after']) ? '' : number_format((float)$row['balance_after'], 2, '.', '');
+
+                    fputcsv($handle, [$row['transaction_date'], $row['type'], $amount, $balance, $row['description']]);
                 }
             });
+
+            // blank line then summary
+            fputcsv($handle, []);
+            fputcsv($handle, ['Summary']);
+            fputcsv($handle, ['total_credit', number_format($summary['total_credit'] ?? 0, 2, '.', '')]);
+            fputcsv($handle, ['total_debit', number_format($summary['total_debit'] ?? 0, 2, '.', '')]);
 
             fclose($handle);
         });
