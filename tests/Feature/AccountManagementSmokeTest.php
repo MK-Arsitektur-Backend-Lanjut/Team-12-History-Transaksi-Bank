@@ -143,7 +143,7 @@ class AccountManagementSmokeTest extends TestCase
         $statementResponse = $this->getJson('/api/statements?account_id=' . $account->id . '&start_date=' . $startDate . '&end_date=' . $endDate . '&per_page=15');
 
         $statementResponse->assertOk()
-            ->assertJsonCount(2, 'data')
+            ->assertJsonCount(2, 'transactions')
             ->assertJsonPath('meta.total', 2);
 
         $this->assertSame(1000.0, (float) $statementResponse->json('summary.total_credit'));
@@ -153,6 +153,6 @@ class AccountManagementSmokeTest extends TestCase
 
         $exportResponse->assertOk();
         $this->assertSame('text/csv; charset=UTF-8', $exportResponse->headers->get('Content-Type'));
-        $this->assertStringContainsString('attachment; filename="statement_' . $account->id . '_', $exportResponse->headers->get('Content-Disposition'));
+        $this->assertStringContainsString('attachment; filename="statement_' . $account->account_number . '_', $exportResponse->headers->get('Content-Disposition'));
     }
 }
