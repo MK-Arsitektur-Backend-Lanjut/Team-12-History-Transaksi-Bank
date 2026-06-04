@@ -171,11 +171,19 @@ class StatementController extends Controller
 
             $this->repo->streamByAccountDate($accountId, $start, $end, 1000, function ($chunk) use ($handle) {
                 foreach ($chunk as $row) {
-                    fputcsv($handle, [$row['reference_number'], $row['transaction_date'], $row['type'], $row['amount'], $row['balance_before'], $row['balance_after'], $row['description']]);
                     $amount = is_null($row['amount']) ? '' : number_format((float)$row['amount'], 2, '.', '');
-                    $balance = is_null($row['balance_after']) ? '' : number_format((float)$row['balance_after'], 2, '.', '');
+                    $before = is_null($row['balance_before']) ? '' : number_format((float)$row['balance_before'], 2, '.', '');
+                    $after = is_null($row['balance_after']) ? '' : number_format((float)$row['balance_after'], 2, '.', '');
 
-                    fputcsv($handle, [$row['transaction_date'], $row['type'], $amount, $balance, $row['description']]);
+                    fputcsv($handle, [
+                        $row['reference_number'],
+                        $row['transaction_date'] instanceof \Carbon\Carbon ? $row['transaction_date']->toDateTimeString() : (string) $row['transaction_date'],
+                        $row['type'],
+                        $amount,
+                        $before,
+                        $after,
+                        $row['description']
+                    ]);
                 }
             });
 

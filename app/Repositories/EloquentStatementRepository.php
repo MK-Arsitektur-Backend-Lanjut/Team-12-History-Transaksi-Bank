@@ -28,11 +28,8 @@ class EloquentStatementRepository implements StatementRepositoryInterface
 
         $query = Transaction::query()
             ->where('account_id', $accountId)
-            ->whereBetween('transaction_date', [$startDate, $endDate])
-            ->select(['id', 'reference_number', 'transaction_date', 'type', 'amount', 'balance_before', 'balance_after', 'description'])
-            ->orderBy('transaction_date', 'desc');
             ->whereBetween($dateCol, [$startDate, $endDate])
-            ->select(['id', DB::raw($dateCol . ' as transaction_date'), 'type', 'amount', 'balance_after', 'description'])
+            ->select(['id', 'reference_number', $dateCol . ' as transaction_date', 'type', 'amount', 'balance_before', 'balance_after', 'description'])
             ->orderBy($dateCol, 'desc');
 
         return $query->paginate($perPage);
@@ -81,18 +78,18 @@ class EloquentStatementRepository implements StatementRepositoryInterface
         $startDate = Carbon::parse($startDate)->startOfDay()->toDateTimeString();
         $endDate = Carbon::parse($endDate)->endOfDay()->toDateTimeString();
 
-        // Use cursor() with deterministic ordering to stream rows in constant memory.
-        // Order by date desc, then id desc for tie-breaker. This avoids mixing orderBy + chunkById.
-        $query = Transaction::query()
+        // Use chunkById for constant memory.
+        Transaction::query()
             ->where('account_id', $accountId)
-            ->whereBetween('transaction_date', [$startDate, $endDate])
-            ->select(['id', 'reference_number', 'transaction_date', 'type', 'amount', 'balance_before', 'balance_after', 'description'])
-            ->orderBy('transaction_date', 'desc')
+            ->whereBetween($dateCol, [$startDate, $endDate])
+            ->select(['id', 'reference_number', $dateCol . ' as transaction_date', 'type', 'amount', 'balance_before', 'balance_after', 'description'])
             ->chunkById($chunkSize, function ($rows) use ($callback) {
                 $data = $rows->map(function ($r) {
+                    $td = $r->transaction_date;
+                    $tds = $td instanceof \Carbon\Carbon ? $td->toDateTimeString() : (string) $td;
                     return [
                         'reference_number' => $r->reference_number,
-                        'transaction_date' => $r->transaction_date->toDateTimeString(),
+                        'transaction_date' => $tds,
                         'type' => $r->type,
                         'amount' => $r->amount,
                         'balance_before' => $r->balance_before,
@@ -103,44 +100,6 @@ class EloquentStatementRepository implements StatementRepositoryInterface
 
                 $callback($data);
             });
-            ->whereBetween($dateCol, [$startDate, $endDate])
-            ->select(['id', DB::raw($dateCol . ' as transaction_date'), 'type', 'amount', 'balance_after', 'description'])
-            ->orderBy($dateCol, 'desc')
-            ->orderBy('id', 'desc');
-
-        $buffer = [];
-        $count = 0;
-
-        foreach ($query->cursor() as $r) {
-            $td = $r->transaction_date ?? null;
-            if ($td instanceof \Illuminate\Support\Carbon) {
-                $tds = $td->toDateTimeString();
-            } else {
-                $tds = $td ? Carbon::parse($td)->toDateTimeString() : null;
-            }
-
-            $buffer[] = [
-                'transaction_date' => $tds,
-                'type' => $r->type,
-                'amount' => $r->amount,
-                'balance_after' => $r->balance_after,
-                'description' => $r->description,
-            ];
-
-            $count++;
-
-            if ($count >= $chunkSize) {
-                $callback($buffer);
-                // reset
-                $buffer = [];
-                $count = 0;
-            }
-        }
-
-        // flush remaining
-        if (count($buffer) > 0) {
-            $callback($buffer);
-        }
     }
 
     private function detectDateColumn(): string
