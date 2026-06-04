@@ -9,6 +9,7 @@ use App\Http\Resources\AccountResource;
 use App\Services\Account\AccountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use OpenApi\Attributes as OA;
 
@@ -76,8 +77,8 @@ class StatementController extends Controller
 
         $perPage = $data['per_page'] ?? 15;
 
-        $start = $data['start_date'];
-        $end = $data['end_date'];
+        $start = Carbon::parse($data['start_date'])->startOfDay()->toDateTimeString();
+        $end = Carbon::parse($data['end_date'])->endOfDay()->toDateTimeString();
         $accountId = (int) $data['account_id'];
 
         $paginator = $this->repo->paginateByAccountDate($accountId, $start, $end, $perPage);
@@ -138,8 +139,8 @@ class StatementController extends Controller
     {
         $data = $request->validated();
 
-        $start = $data['start_date'];
-        $end = $data['end_date'];
+        $start = Carbon::parse($data['start_date'])->startOfDay()->toDateTimeString();
+        $end = Carbon::parse($data['end_date'])->endOfDay()->toDateTimeString();
         $accountId = (int) $data['account_id'];
 
         // try to include account_number in filename for clarity
@@ -150,6 +151,7 @@ class StatementController extends Controller
 
         $response = new StreamedResponse(function () use ($accountId, $start, $end) {
             $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['reference_number', 'transaction_date', 'type', 'amount', 'balance_before', 'balance_after', 'description']);
 
             // account header
             $acct = $this->accountService->find($accountId);
@@ -169,6 +171,7 @@ class StatementController extends Controller
 
             $this->repo->streamByAccountDate($accountId, $start, $end, 1000, function ($chunk) use ($handle) {
                 foreach ($chunk as $row) {
+                    fputcsv($handle, [$row['reference_number'], $row['transaction_date'], $row['type'], $row['amount'], $row['balance_before'], $row['balance_after'], $row['description']]);
                     $amount = is_null($row['amount']) ? '' : number_format((float)$row['amount'], 2, '.', '');
                     $balance = is_null($row['balance_after']) ? '' : number_format((float)$row['balance_after'], 2, '.', '');
 

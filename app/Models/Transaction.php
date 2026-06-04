@@ -21,13 +21,14 @@ class Transaction extends Model
         'balance_before',
         'balance_after',
         'description',
-        'transacted_at',
+        'transaction_date',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'balance_before' => 'decimal:2',
         'balance_after' => 'decimal:2',
+        'transaction_date' => 'datetime',
         'balance_before' => 'decimal:2',
         'transaction_date' => 'datetime',
         'transacted_at' => 'datetime',

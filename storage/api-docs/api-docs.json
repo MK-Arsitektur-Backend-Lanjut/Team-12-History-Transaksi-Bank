@@ -528,10 +528,10 @@
                                     "type": {
                                         "description": "Transaction type",
                                         "type": "string",
-                                        "example": "kredit",
+                                        "example": "credit",
                                         "enum": [
                                             "debit",
-                                            "kredit"
+                                            "credit"
                                         ]
                                     },
                                     "amount": {
@@ -540,6 +540,11 @@
                                         "format": "float",
                                         "example": 100000,
                                         "minimum": 0.01
+                                    },
+                                    "reference_number": {
+                                        "description": "Idempotency key / external reference",
+                                        "type": "string",
+                                        "example": "4f0c4ae0-7b16-48d7-9488-5893710bbda8"
                                     }
                                 },
                                 "type": "object"
@@ -548,7 +553,7 @@
                     }
                 },
                 "responses": {
-                    "200": {
+                    "201": {
                         "description": "Transaction created successfully",
                         "content": {
                             "application/json": {
@@ -760,6 +765,77 @@
                 },
                 "type": "object"
             },
+            "CreateTransactionRequest": {
+                "description": "Create transaction request. Use reference_number for idempotency (same reference_number = idempotent operation).",
+                "required": [
+                    "account_id",
+                    "type",
+                    "amount"
+                ],
+                "properties": {
+                    "account_id": {
+                        "description": "Account ID (must exist)",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "type": {
+                        "description": "Transaction type",
+                        "type": "string",
+                        "example": "credit",
+                        "enum": [
+                            "debit",
+                            "credit"
+                        ]
+                    },
+                    "amount": {
+                        "description": "Transaction amount",
+                        "type": "number",
+                        "format": "float",
+                        "example": 100000,
+                        "minimum": 0.01
+                    },
+                    "description": {
+                        "description": "Optional transaction description",
+                        "type": "string",
+                        "example": "Payment for invoice",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "reference_number": {
+                        "description": "Idempotency key / external reference (UUID recommended)",
+                        "type": "string",
+                        "example": "PAY-2026-06-03-001",
+                        "nullable": true,
+                        "maxLength": 191
+                    }
+                },
+                "type": "object"
+            },
+            "TransactionResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "transaction": {
+                        "$ref": "#/components/schemas/Transaction"
+                    }
+                },
+                "type": "object"
+            },
+            "ErrorMessageResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Account not found."
+                    }
+                },
+                "type": "object"
+            },
             "AccountDataResponse": {
                 "properties": {
                     "data": {
@@ -832,7 +908,9 @@
                     "reference_number",
                     "type",
                     "amount",
-                    "balance_after"
+                    "balance_before",
+                    "balance_after",
+                    "transaction_date"
                 ],
                 "properties": {
                     "id": {
@@ -850,10 +928,10 @@
                     },
                     "type": {
                         "type": "string",
-                        "example": "kredit",
+                        "example": "credit",
                         "enum": [
                             "debit",
-                            "kredit"
+                            "credit"
                         ]
                     },
                     "amount": {
@@ -861,10 +939,20 @@
                         "format": "float",
                         "example": 100000
                     },
+                    "balance_before": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 0
+                    },
                     "balance_after": {
                         "type": "number",
                         "format": "float",
                         "example": 100000
+                    },
+                    "transaction_date": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-15T10:00:00Z"
                     },
                     "description": {
                         "type": "string",

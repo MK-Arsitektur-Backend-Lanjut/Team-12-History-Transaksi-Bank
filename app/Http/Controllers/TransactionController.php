@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TransactionService;
 use App\Models\Transaction;
 use App\Services\Account\AccountService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
 use OpenApi\Attributes as OA;
@@ -15,6 +15,13 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Transactions', description: 'Transaction Logging API')]
 class TransactionController extends Controller
 {
+    private TransactionService $service;
+
+    public function __construct(TransactionService $service)
+    {
+        $this->service = $service;
+    }
+
     private AccountService $accountService;
 
     public function __construct(AccountService $accountService)
@@ -32,14 +39,15 @@ class TransactionController extends Controller
                 required: ['account_id', 'type', 'amount'],
                 properties: [
                     new OA\Property(property: 'account_id', type: 'integer', description: 'Account ID', example: 1),
-                    new OA\Property(property: 'type', type: 'string', enum: ['debit', 'kredit'], description: 'Transaction type', example: 'kredit'),
-                    new OA\Property(property: 'amount', type: 'number', format: 'float', description: 'Transaction amount', minimum: 0.01, example: 100000.00)
+                        new OA\Property(property: 'type', type: 'string', enum: ['debit', 'credit'], description: 'Transaction type', example: 'credit'),
+                    new OA\Property(property: 'amount', type: 'number', format: 'float', description: 'Transaction amount', minimum: 0.01, example: 100000.00),
+                    new OA\Property(property: 'reference_number', type: 'string', description: 'Idempotency key / external reference', example: '4f0c4ae0-7b16-48d7-9488-5893710bbda8')
                 ]
             )
         ),
         responses: [
             new OA\Response(
-                response: 200,
+                    response: 201,
                 description: 'Transaction created successfully',
                 content: new OA\JsonContent(
                     properties: [
@@ -58,6 +66,15 @@ class TransactionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'account_id' => ['required', 'integer', Rule::exists('accounts', 'id')],
+            'type' => ['required', Rule::in(['debit', 'credit'])],
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'reference_number' => ['sometimes', 'nullable', 'string', 'max:191'],
+        ]);
+
+        try {
+            $transaction = $this->service->create($validated);
             'account_id' => 'required|integer',
             'type' => 'required|in:debit,credit,kredit',
             'amount' => 'required|numeric|min:0.01',
@@ -109,7 +126,17 @@ class TransactionController extends Controller
             return response()->json([
                 'success' => true,
                 'transaction' => $transaction
-            ]);
-        });
+            ], 201);
+        } catch (\RuntimeException $e) {
+            $msg = $e->getMessage();
+
+            if (str_contains(strtolower($msg), 'not found')) {
+                return response()->json(['success' => false, 'message' => $msg], 404);
+            }
+
+            return response()->json(['success' => false, 'message' => $msg], 422);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Internal server error'], 500);
+        }
     }
 }
