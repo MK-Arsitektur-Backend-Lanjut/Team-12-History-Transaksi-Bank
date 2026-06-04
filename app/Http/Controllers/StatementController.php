@@ -164,21 +164,13 @@ class StatementController extends Controller
             fputcsv($handle, ['transaction_date', 'type', 'amount', 'balance_after', 'description']);
 
             // stream rows and format numbers
-            $totalCredit = 0;
-            $totalDebit = 0;
+            // compute summary totals via repository (single aggregated query)
+            $summary = $this->repo->getSummaryTotals($accountId, $start, $end);
 
-            $this->repo->streamByAccountDate($accountId, $start, $end, 1000, function ($chunk) use ($handle, &$totalCredit, &$totalDebit) {
+            $this->repo->streamByAccountDate($accountId, $start, $end, 1000, function ($chunk) use ($handle) {
                 foreach ($chunk as $row) {
                     $amount = is_null($row['amount']) ? '' : number_format((float)$row['amount'], 2, '.', '');
                     $balance = is_null($row['balance_after']) ? '' : number_format((float)$row['balance_after'], 2, '.', '');
-
-                    // accumulate totals by type
-                    $t = strtolower($row['type'] ?? '');
-                    if (in_array($t, ['credit', 'kredit'])) {
-                        $totalCredit += (float) $row['amount'];
-                    } elseif ($t === 'debit') {
-                        $totalDebit += (float) $row['amount'];
-                    }
 
                     fputcsv($handle, [$row['transaction_date'], $row['type'], $amount, $balance, $row['description']]);
                 }
@@ -187,8 +179,8 @@ class StatementController extends Controller
             // blank line then summary
             fputcsv($handle, []);
             fputcsv($handle, ['Summary']);
-            fputcsv($handle, ['total_credit', number_format($totalCredit, 2, '.', '')]);
-            fputcsv($handle, ['total_debit', number_format($totalDebit, 2, '.', '')]);
+            fputcsv($handle, ['total_credit', number_format($summary['total_credit'] ?? 0, 2, '.', '')]);
+            fputcsv($handle, ['total_debit', number_format($summary['total_debit'] ?? 0, 2, '.', '')]);
 
             fclose($handle);
         });
