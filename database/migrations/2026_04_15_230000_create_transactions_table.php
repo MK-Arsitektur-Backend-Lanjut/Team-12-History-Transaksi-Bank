@@ -17,7 +17,7 @@ return new class extends Migration
             $table->decimal('balance_before', 18, 2)->nullable();
             $table->decimal('balance_after', 18, 2);
             $table->string('description')->nullable();
-            $table->timestamp('transaction_date')->index();
+            $table->dateTime('transaction_date')->index();
             $table->timestamps();
 
             $table->index(['account_id', 'transaction_date']);

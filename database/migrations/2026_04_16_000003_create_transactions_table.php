@@ -23,7 +23,7 @@ return new class extends Migration
             $table->enum('type', ['debit', 'credit'])->index();
             $table->decimal('amount', 15, 2);
             $table->decimal('balance_after', 15, 2)->nullable();
-            $table->timestamp('transaction_date')->index();
+            $table->dateTime('transaction_date')->index();
             $table->string('description')->nullable();
             $table->timestamps();
 
