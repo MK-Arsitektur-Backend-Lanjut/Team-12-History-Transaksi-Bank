@@ -3,15 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use App\Services\Account\AccountService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Redis;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(name: 'Transactions', description: 'Transaction Logging API')]
 class TransactionController extends Controller
 {
+    private AccountService $accountService;
+
+    public function __construct(AccountService $accountService)
+    {
+        $this->accountService = $accountService;
+    }
     #[OA\Post(
         path: '/api/transactions',
         summary: 'Create transaction log',
@@ -55,38 +64,47 @@ class TransactionController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated) {
-            // Normalisasi tipe transaksi (terima 'kredit' sebagai 'credit')
+            // Normalize type (accept 'kredit')
             $type = strtolower($validated['type']);
             if ($type === 'kredit') {
                 $type = 'credit';
             }
 
-            // Ambil saldo terakhir
-            $last = Transaction::where('account_id', $validated['account_id'])
-                ->orderByDesc('id')->first();
-            $lastBalance = $last ? $last->balance_after : 0;
-
-            // Validasi saldo cukup jika debit
-            if ($type === 'debit' && $lastBalance < $validated['amount']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Saldo tidak cukup.'
-                ], 422);
+            // Find account and ensure it exists
+            $account = $this->accountService->find((int) $validated['account_id']);
+            if (! $account) {
+                return response()->json(['message' => 'Account not found.'], 404);
             }
 
-            $newBalance = $type === 'debit'
-                ? $lastBalance - $validated['amount']
-                : $lastBalance + $validated['amount'];
+            // Use AccountService to perform atomic balance update
+            $updatedAccount = $this->accountService->adjustBalance($account, $type, (float) $validated['amount']);
+
+            // Derive balance_before from updated balance and operation
+            $after = (float) $updatedAccount->balance;
+            $amount = (float) $validated['amount'];
+            $before = $type === 'credit' ? $after - $amount : $after + $amount;
 
             $transaction = Transaction::create([
-                'account_id' => $validated['account_id'],
+                'account_id' => $updatedAccount->id,
                 'reference_number' => strtoupper((string) Str::uuid()),
                 'type' => $type,
-                'amount' => $validated['amount'],
-                'balance_before' => $lastBalance,
-                'balance_after' => $newBalance,
+                'amount' => $amount,
+                'balance_before' => $before,
+                'balance_after' => $after,
                 'transacted_at' => now(),
             ]);
+
+            // Invalidate cached statement summaries for this account (Redis key pattern).
+            try {
+                $pattern = sprintf('stmt:summary:%d:*', $updatedAccount->id);
+                $redis = Redis::connection();
+                $keys = $redis->keys($pattern);
+                foreach ($keys as $k) {
+                    $redis->del($k);
+                }
+            } catch (\Throwable $e) {
+                // Ignore if Redis isn't available or deletion fails.
+            }
 
             return response()->json([
                 'success' => true,
