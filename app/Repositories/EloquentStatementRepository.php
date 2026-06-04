@@ -13,7 +13,7 @@ class EloquentStatementRepository implements StatementRepositoryInterface
         $query = Transaction::query()
             ->where('account_id', $accountId)
             ->whereBetween('transaction_date', [$startDate, $endDate])
-            ->select(['id', 'transaction_date', 'type', 'amount', 'balance_after', 'description'])
+            ->select(['id', 'reference_number', 'transaction_date', 'type', 'amount', 'balance_before', 'balance_after', 'description'])
             ->orderBy('transaction_date', 'desc');
 
         return $query->paginate($perPage);
@@ -38,14 +38,16 @@ class EloquentStatementRepository implements StatementRepositoryInterface
         Transaction::query()
             ->where('account_id', $accountId)
             ->whereBetween('transaction_date', [$startDate, $endDate])
-            ->select(['id','transaction_date', 'type', 'amount', 'balance_after', 'description'])
+            ->select(['id', 'reference_number', 'transaction_date', 'type', 'amount', 'balance_before', 'balance_after', 'description'])
             ->orderBy('transaction_date', 'desc')
             ->chunkById($chunkSize, function ($rows) use ($callback) {
                 $data = $rows->map(function ($r) {
                     return [
+                        'reference_number' => $r->reference_number,
                         'transaction_date' => $r->transaction_date->toDateTimeString(),
                         'type' => $r->type,
                         'amount' => $r->amount,
+                        'balance_before' => $r->balance_before,
                         'balance_after' => $r->balance_after,
                         'description' => $r->description,
                     ];

@@ -7,6 +7,7 @@ use App\Http\Resources\TransactionResource;
 use App\Repositories\StatementRepositoryInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use OpenApi\Attributes as OA;
 
@@ -72,8 +73,8 @@ class StatementController extends Controller
 
         $perPage = $data['per_page'] ?? 15;
 
-        $start = $data['start_date'];
-        $end = $data['end_date'];
+        $start = Carbon::parse($data['start_date'])->startOfDay()->toDateTimeString();
+        $end = Carbon::parse($data['end_date'])->endOfDay()->toDateTimeString();
         $accountId = (int) $data['account_id'];
 
         $paginator = $this->repo->paginateByAccountDate($accountId, $start, $end, $perPage);
@@ -126,19 +127,19 @@ class StatementController extends Controller
     {
         $data = $request->validated();
 
-        $start = $data['start_date'];
-        $end = $data['end_date'];
+        $start = Carbon::parse($data['start_date'])->startOfDay()->toDateTimeString();
+        $end = Carbon::parse($data['end_date'])->endOfDay()->toDateTimeString();
         $accountId = (int) $data['account_id'];
 
         $fileName = sprintf('statement_%d_%s_%s.csv', $accountId, str_replace(':', '-', $start), str_replace(':', '-', $end));
 
         $response = new StreamedResponse(function () use ($accountId, $start, $end) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['transaction_date', 'type', 'amount', 'balance_after', 'description']);
+            fputcsv($handle, ['reference_number', 'transaction_date', 'type', 'amount', 'balance_before', 'balance_after', 'description']);
 
             $this->repo->streamByAccountDate($accountId, $start, $end, 1000, function ($chunk) use ($handle) {
                 foreach ($chunk as $row) {
-                    fputcsv($handle, [$row['transaction_date'], $row['type'], $row['amount'], $row['balance_after'], $row['description']]);
+                    fputcsv($handle, [$row['reference_number'], $row['transaction_date'], $row['type'], $row['amount'], $row['balance_before'], $row['balance_after'], $row['description']]);
                 }
             });
 

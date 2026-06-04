@@ -4,31 +4,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Transaction extends Model
+class DailyBalancesSummary extends Model
 {
     use HasFactory;
 
-    protected $table = 'transactions';
+    protected $table = 'daily_balances_summary';
 
     protected $fillable = [
         'account_id',
-        'reference_number',
-        'type',
-        'amount',
-        'balance_before',
-        'balance_after',
-        'description',
-        'transaction_date',
+        'summary_date',
+        'total_credit',
+        'total_debit',
+        'closing_balance',
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
-        'balance_before' => 'decimal:2',
-        'balance_after' => 'decimal:2',
-        'transaction_date' => 'datetime',
+        'summary_date' => 'date',
+        'total_credit' => 'decimal:2',
+        'total_debit' => 'decimal:2',
+        'closing_balance' => 'decimal:2',
     ];
 
     public function account(): BelongsTo

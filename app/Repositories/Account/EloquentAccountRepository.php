@@ -17,12 +17,16 @@ class EloquentAccountRepository implements AccountRepositoryInterface
 
     public function findById(int $id): ?Account
     {
-        return Account::query()->find($id);
+        return \Illuminate\Support\Facades\Cache::remember("account:id:{$id}", 3600, function () use ($id) {
+            return Account::query()->find($id);
+        });
     }
 
     public function findByAccountNumber(string $accountNumber): ?Account
     {
-        return Account::query()->where('account_number', $accountNumber)->first();
+        return \Illuminate\Support\Facades\Cache::remember("account:number:{$accountNumber}", 3600, function () use ($accountNumber) {
+            return Account::query()->where('account_number', $accountNumber)->first();
+        });
     }
 
     public function create(array $data): Account
