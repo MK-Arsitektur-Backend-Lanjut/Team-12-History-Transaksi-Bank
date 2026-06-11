@@ -94,6 +94,7 @@ class BeforeOptimizationDemoTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['cache.default' => 'array']);
         Cache::flush();
     }
 

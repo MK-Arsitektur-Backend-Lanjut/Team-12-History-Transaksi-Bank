@@ -4,9 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
 use OpenApi\Attributes as OA;
@@ -34,6 +31,7 @@ class TransactionController extends Controller
                     new OA\Property(property: 'account_id', type: 'integer', description: 'Account ID', example: 1),
                     new OA\Property(property: 'type', type: 'string', enum: ['debit', 'credit'], description: 'Transaction type', example: 'credit'),
                     new OA\Property(property: 'amount', type: 'number', format: 'float', description: 'Transaction amount', minimum: 0.01, example: 100000.00),
+                    new OA\Property(property: 'description', type: 'string', nullable: true, description: 'Optional description', example: 'Payment for invoice'),
                     new OA\Property(property: 'reference_number', type: 'string', description: 'Idempotency key / external reference', example: '4f0c4ae0-7b16-48d7-9488-5893710bbda8')
                 ]
             )
@@ -64,55 +62,18 @@ class TransactionController extends Controller
             'amount' => 'required|numeric|min:1',
         ]);
 
-        $cacheKey = $this->getBalanceCacheKey($validated['account_id']);
-        $lockKey = "{$cacheKey}:lock";
+        try {
+            $transaction = $this->service->create($validated);
 
-        return Cache::store('redis')->lock($lockKey, 10)->block(5, function () use ($validated, $cacheKey) {
-            return DB::transaction(function () use ($validated, $cacheKey) {
-                $lastBalance = $this->getCachedLastBalance($validated['account_id'], $cacheKey);
-
-                if ($validated['type'] === 'debit' && $lastBalance < $validated['amount']) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Saldo tidak cukup.'
-                    ], 422);
-                }
-
-                $newBalance = $validated['type'] === 'debit'
-                    ? $lastBalance - $validated['amount']
-                    : $lastBalance + $validated['amount'];
-
-                $transaction = Transaction::create([
-                    'account_id' => $validated['account_id'],
-                    'reference_number' => strtoupper(Str::uuid()),
-                    'type' => $validated['type'],
-                    'amount' => $validated['amount'],
-                    'balance_after' => $newBalance,
-                ]);
-
-                Cache::store('redis')->put($cacheKey, $newBalance, now()->addMinutes(10));
-
-                return response()->json([
-                    'success' => true,
-                    'transaction' => $transaction
-                ]);
-            });
-        });
-    }
-
-    private function getCachedLastBalance(int $accountId, string $cacheKey): float
-    {
-        return Cache::store('redis')->remember($cacheKey, now()->addMinutes(10), function () use ($accountId) {
-            $last = Transaction::where('account_id', $accountId)
-                ->orderByDesc('id')
-                ->first();
-
-            return $last ? $last->balance_after : 0;
-        });
-    }
-
-    private function getBalanceCacheKey(int $accountId): string
-    {
-        return "account_balance:{$accountId}";
+            return response()->json([
+                'success' => true,
+                'transaction' => $transaction,
+            ], 201);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 }
