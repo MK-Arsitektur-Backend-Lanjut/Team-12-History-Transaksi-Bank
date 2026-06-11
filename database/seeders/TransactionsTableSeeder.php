@@ -27,6 +27,29 @@ class TransactionsTableSeeder extends Seeder
         // delete existing rows to make seeder idempotent
         \DB::table('transactions')->delete();
 
+        // Ensure there are enough sample accounts to reference. If not, create missing accounts.
+        $desiredAccounts = $accounts;
+        $existingAccounts = (int) \DB::table('accounts')->count();
+        if ($existingAccounts < $desiredAccounts) {
+            $toCreate = $desiredAccounts - $existingAccounts;
+            $acctRows = [];
+            for ($a = 1; $a <= $toCreate; $a++) {
+                $num = $existingAccounts + $a;
+                $acctRows[] = [
+                    'account_number' => 'ACCT-' . $num,
+                    'customer_name' => 'Seed Account ' . $num,
+                    'email' => "seed{$num}@example.com",
+                    'status' => 'active',
+                    'balance' => 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+            if (count($acctRows)) {
+                \DB::table('accounts')->insert($acctRows);
+            }
+        }
+
         $now = now();
         $rows = [];
 
@@ -41,9 +64,11 @@ class TransactionsTableSeeder extends Seeder
 
             $rows[] = [
                 'account_id' => $accountId,
+                'reference_number' => (string) Str::uuid(),
                 'type' => $type,
                 'amount' => $amount,
-                'balance_after' => null,
+                'balance_before' => 0,
+                'balance_after' => 0,
                 'transaction_date' => $transactionDate->toDateTimeString(),
                 'description' => 'Seed transaction ' . $i,
                 'created_at' => $transactionDate->toDateTimeString(),
@@ -73,22 +98,26 @@ class TransactionsTableSeeder extends Seeder
                     $updates = [];
                     foreach ($chunk as $row) {
                         $amt = (float) $row->amount;
+                        $balanceBefore = $balance;
                         $balance += ($row->type === 'credit') ? $amt : -$amt;
-                        $updates[] = ['id' => $row->id, 'balance_after' => $balance];
+                        $updates[] = ['id' => $row->id, 'balance_before' => $balanceBefore, 'balance_after' => $balance];
                     }
 
                     // perform bulk updates using CASE WHEN for efficiency
-                    $cases = [];
+                    $balanceBeforeCases = [];
+                    $balanceAfterCases = [];
                     $ids = [];
                     foreach ($updates as $u) {
-                        $cases[] = "WHEN id = {$u['id']} THEN {$u['balance_after']}";
+                        $balanceBeforeCases[] = "WHEN id = {$u['id']} THEN {$u['balance_before']}";
+                        $balanceAfterCases[] = "WHEN id = {$u['id']} THEN {$u['balance_after']}";
                         $ids[] = $u['id'];
                     }
 
                     if (count($ids)) {
-                        $casesSql = implode(' ', $cases);
+                        $balanceBeforeSql = implode(' ', $balanceBeforeCases);
+                        $balanceAfterSql = implode(' ', $balanceAfterCases);
                         $idsSql = implode(',', $ids);
-                        \DB::statement("UPDATE transactions SET balance_after = CASE {$casesSql} END WHERE id IN ({$idsSql})");
+                        \DB::statement("UPDATE transactions SET balance_before = CASE {$balanceBeforeSql} END, balance_after = CASE {$balanceAfterSql} END WHERE id IN ({$idsSql})");
                     }
                 });
         }

@@ -1,53 +1,317 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🏦 Account Management API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistem manajemen akun bank dengan transaction logging dan statement generation.
 
-## About Laravel
+**Repo**: [Team-12-History-Transaksi-Bank](https://github.com/MK-Arsitektur-Backend-Lanjut/Team-12-History-Transaksi-Bank)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 📋 Table of Contents
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Documentation](#-documentation)
+- [API Endpoints](#-api-endpoints)
+- [Architecture](#-architecture)
+- [Tech Stack](#-tech-stack)
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## ✨ Features
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 🔐 Account Management
+- Create & manage customer accounts
+- Update customer profile (name, email, phone, address)
+- Account status management (active, inactive, blocked)
+- Atomic balance adjustments with row-level locking
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### 💰 Transaction Logging
+- Automatic transaction recording for debit/credit operations
+- Unique reference number per transaction
+- Balance before/after tracking
+- Transaction history audit trail
 
-## Agentic Development
+### 📊 Statement Generation
+- Paginated transaction history retrieval
+- Date range filtering
+- Summary totals (total debit, total credit)
+- CSV export for record-keeping
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### 🔒 Data Integrity
+- Database transactions with pessimistic locking
+- Sufficient balance validation
+- Account status validation before operations
+- Unique constraints on critical fields
+
+---
+
+## ⚡ Quick Start
+
+### 🐳 Docker Way (Recommended)
 
 ```bash
-composer require laravel/boost --dev
+git clone https://github.com/MK-Arsitektur-Backend-Lanjut/Team-12-History-Transaksi-Bank.git
+cd Team-12-History-Transaksi-Bank
+git pull origin main
 
-php artisan boost:install
+cp .env.example .env
+composer install && npm install
+php artisan key:generate
+
+docker compose up -d
+sleep 15
+docker compose exec app php artisan migrate
+docker compose exec app php artisan l5-swagger:generate
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+**Access**:
+- API: `http://localhost:8000/api`
+- Swagger UI: `http://localhost:8000/api/documentation`
 
-## Contributing
+### 🖥️ Local MySQL Way
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+git clone https://github.com/MK-Arsitektur-Backend-Lanjut/Team-12-History-Transaksi-Bank.git
+cd Team-12-History-Transaksi-Bank
+git pull origin main
 
-## Code of Conduct
+cp .env.example .env
+# Edit .env - set DB credentials
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+composer install && npm install
+php artisan key:generate
+php artisan migrate
+php artisan l5-swagger:generate
+
+php artisan serve
+```
+
+**More setup details?** → See [`QUICKSTART.md`](./QUICKSTART.md) or [`SETUP_GUIDE.md`](./SETUP_GUIDE.md)
+
+---
+
+## 📚 Documentation
+
+| Document | Purpose |
+|----------|---------|
+| **[QUICKSTART.md](./QUICKSTART.md)** | 5-minute setup guide |
+| **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** | Complete setup documentation with troubleshooting |
+| **API Docs** | Swagger UI at `/api/documentation` |
+
+---
+
+## 🎯 API Endpoints
+
+### Accounts
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/accounts` | List all accounts (paginated) |
+| POST | `/api/accounts` | Create new account |
+| GET | `/api/accounts/{id}` | Get account detail |
+| PATCH | `/api/accounts/{id}` | Update profile |
+| PATCH | `/api/accounts/{id}/status` | Update status |
+| POST | `/api/accounts/{id}/balance/adjust` | Adjust balance (debit/credit) |
+
+### Statements
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/statements` | Get statement (paginated) |
+| GET | `/api/statements/export` | Export as CSV |
+
+### Transactions
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/transactions` | Log transaction |
+
+**Full API documentation** available at `/api/documentation` after running the server.
+
+---
+
+## 🏗️ Architecture
+
+### Layered Architecture
+
+```
+Routes (api.php)
+    ↓
+Controllers (Http/Controllers/)
+    ↓
+Services (Services/)
+    ↓
+Repositories (Repositories/)
+    ↓
+Models (Models/)
+    ↓
+Database
+```
+
+### Key Components
+
+- **Controllers**: Request handling & routing
+- **Services**: Business logic & orchestration
+- **Repositories**: Data access abstraction
+- **Models**: Eloquent ORM entities
+- **Migrations**: Database schema versioning
+
+### Design Patterns
+
+✅ Repository Pattern - Data access abstraction
+✅ Service Layer - Business logic encapsulation
+✅ Dependency Injection - Loose coupling
+✅ Atomic Transactions - Data consistency with database locking
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| Framework | Laravel 11.x |
+| PHP | 8.2+ |
+| Database | MySQL 8.0+ |
+| API Docs | L5-Swagger (OpenAPI 3.0) |
+| Containerization | Docker & Docker Compose |
+| Frontend Build | Vite |
+| Package Manager | Composer, npm |
+
+---
+
+## 📁 Project Structure
+
+```
+├── app/
+│   ├── Http/Controllers/        # Request handlers
+│   ├── Models/                  # Eloquent models
+│   ├── Repositories/            # Data access layer
+│   ├── Services/                # Business logic
+│   └── OpenApi/                 # Swagger schema definitions
+├── routes/
+│   └── api.php                  # API routes
+├── database/
+│   ├── migrations/              # Schema definitions
+│   ├── factories/               # Model factories
+│   └── seeders/                 # Database seeders
+├── config/
+│   ├── app.php
+│   ├── database.php
+│   └── l5-swagger.php           # Swagger config
+├── storage/api-docs/            # Generated Swagger docs
+├── docker/                       # Docker configuration
+├── SETUP_GUIDE.md               # Complete setup guide
+├── QUICKSTART.md                # Quick start guide
+├── docker-compose.yml           # Docker compose config
+└── .env.example                 # Environment template
+```
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+php artisan test
+
+# Run with Docker
+docker compose exec app php artisan test
+
+# Run specific test
+php artisan test --filter=AccountTest
+```
+
+---
+
+## 🔄 Development Workflow
+
+1. **Create feature branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Make changes** following project conventions
+
+3. **Update Swagger docs** (if API changes)
+   ```bash
+   php artisan l5-swagger:generate
+   ```
+
+4. **Test & commit**
+   ```bash
+   php artisan test
+   git add .
+   git commit -m "feat: your feature description"
+   ```
+
+5. **Push & create PR**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+---
+
+## 📝 Important Commands
+
+```bash
+# Database
+php artisan migrate              # Run migrations
+php artisan migrate:rollback     # Rollback migrations
+php artisan db:seed              # Seed database
+
+# API Documentation
+php artisan l5-swagger:generate  # Generate Swagger docs
+
+# Cache & Optimization
+php artisan cache:clear
+php artisan config:cache
+php artisan route:cache
+
+# Docker
+docker compose up -d             # Start containers
+docker compose down              # Stop containers
+docker compose logs -f app       # View logs
+```
+
+---
+
+## ⚠️ Troubleshooting
+
+### Port 8000 already in use
+```bash
+php artisan serve --port=8080
+```
+
+### Database connection error
+Wait 15 seconds after `docker compose up -d` for database initialization.
+
+### Swagger docs not updating
+```bash
+php artisan l5-swagger:generate
+```
+
+**More troubleshooting?** → See [`SETUP_GUIDE.md`](./SETUP_GUIDE.md#-common-issues--solutions)
+
+---
+
+## 👥 Team
+
+**Team 12 - Arsitektur Backend Lanjut**
+
+---
+
+## 📄 License
+
+MIT License - See LICENSE file
+
+---
+
+## 📞 Support
+
+- Check logs: `storage/logs/laravel.log`
+- Clear cache: `php artisan cache:clear`
+- Consult docs: [`SETUP_GUIDE.md`](./SETUP_GUIDE.md)
+
 
 ## Security Vulnerabilities
 
