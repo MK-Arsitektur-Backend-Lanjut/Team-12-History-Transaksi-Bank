@@ -25,12 +25,14 @@ class TransactionSeeder extends Seeder
                 $baseDate = now()->subYears(2);
                 
                 for ($i = 0; $i < $batchSize; $i++) {
-                    $type = (rand(0, 1) === 1) ? 'debit' : 'kredit';
+                    $type = (rand(0, 1) === 1) ? 'debit' : 'credit';
                     $amount = rand(1000, 1000000);
                     $idx = $batch * $batchSize + $i;
                     $balanceAfter = ($type === 'debit') 
                         ? 10000000 - $idx * 5000 
                         : 10000000 + $idx * 5000;
+                    
+                    $transactionDate = (clone $baseDate)->addSeconds(rand(0, 63072000));
                     
                     $transactions[] = [
                         'account_id' => $accountId,
@@ -38,7 +40,8 @@ class TransactionSeeder extends Seeder
                         'type' => $type,
                         'amount' => $amount,
                         'balance_after' => $balanceAfter,
-                        'created_at' => (clone $baseDate)->addSeconds(rand(0, 63072000)),
+                        'transaction_date' => $transactionDate,
+                        'created_at' => $transactionDate,
                         'updated_at' => now(),
                     ];
                 }
