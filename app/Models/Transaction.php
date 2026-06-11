@@ -21,18 +21,38 @@ class Transaction extends Model
         'balance_before',
         'balance_after',
         'description',
-        'transacted_at',
+        'transaction_date',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'balance_before' => 'decimal:2',
         'balance_after' => 'decimal:2',
+        'transaction_date' => 'datetime',
+        'balance_before' => 'decimal:2',
+        'transaction_date' => 'datetime',
         'transacted_at' => 'datetime',
     ];
 
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    /**
+     * Unified accessor for transaction date used by Statement module.
+     * Falls back to `transaction_date`, then `transacted_at`, then `created_at`.
+     */
+    public function getTransactionDateAttribute()
+    {
+        if (!empty($this->attributes['transaction_date'])) {
+            return \Illuminate\Support\Carbon::parse($this->attributes['transaction_date']);
+        }
+
+        if (!empty($this->attributes['transacted_at'])) {
+            return \Illuminate\Support\Carbon::parse($this->attributes['transacted_at']);
+        }
+
+        return $this->created_at;
     }
 }

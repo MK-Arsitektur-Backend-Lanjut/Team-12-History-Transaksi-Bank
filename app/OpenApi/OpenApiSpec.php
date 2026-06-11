@@ -7,7 +7,7 @@ use OpenApi\Attributes as OA;
 #[OA\Info(
     version: '1.0.0',
     title: 'Team 12 - Account Management API',
-    description: 'API for account profile, status management, and atomic balance update.'
+    description: 'Comprehensive API for account management, transaction logging, and statement generation. Supports account CRUD operations, atomic balance updates, transaction history tracking, and statement export functionality.'
 )]
 #[OA\Server(
     url: 'http://127.0.0.1:8000',
@@ -71,6 +71,35 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
+    schema: 'CreateTransactionRequest',
+    type: 'object',
+    required: ['account_id', 'type', 'amount'],
+    description: 'Create transaction request. Use reference_number for idempotency (same reference_number = idempotent operation).',
+    properties: [
+        new OA\Property(property: 'account_id', type: 'integer', description: 'Account ID (must exist)', example: 1),
+        new OA\Property(property: 'type', type: 'string', enum: ['debit', 'credit'], description: 'Transaction type', example: 'credit'),
+        new OA\Property(property: 'amount', type: 'number', format: 'float', minimum: 0.01, description: 'Transaction amount', example: 100000.00),
+        new OA\Property(property: 'description', type: 'string', nullable: true, maxLength: 255, description: 'Optional transaction description', example: 'Payment for invoice'),
+        new OA\Property(property: 'reference_number', type: 'string', nullable: true, maxLength: 191, description: 'Idempotency key / external reference (UUID recommended)', example: 'PAY-2026-06-03-001'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'TransactionResponse',
+    type: 'object',
+    properties: [
+        new OA\Property(property: 'success', type: 'boolean', example: true),
+        new OA\Property(property: 'transaction', ref: '#/components/schemas/Transaction')
+    ]
+)]
+#[OA\Schema(
+    schema: 'ErrorMessageResponse',
+    type: 'object',
+    properties: [
+        new OA\Property(property: 'success', type: 'boolean', example: false),
+        new OA\Property(property: 'message', type: 'string', example: 'Account not found.')
+    ]
+)]
+#[OA\Schema(
     schema: 'AccountDataResponse',
     type: 'object',
     properties: [
@@ -109,6 +138,24 @@ use OpenApi\Attributes as OA;
                 items: new OA\Items(type: 'string')
             )
         )
+    ]
+)]
+#[OA\Schema(
+    schema: 'Transaction',
+    type: 'object',
+    required: ['id', 'account_id', 'reference_number', 'type', 'amount', 'balance_before', 'balance_after', 'transaction_date'],
+    properties: [
+        new OA\Property(property: 'id', type: 'integer', example: 1),
+        new OA\Property(property: 'account_id', type: 'integer', example: 1),
+        new OA\Property(property: 'reference_number', type: 'string', format: 'uuid', example: '550E8400-E29B-41D4-A716-446655440000'),
+        new OA\Property(property: 'type', type: 'string', enum: ['debit', 'credit'], example: 'credit'),
+        new OA\Property(property: 'amount', type: 'number', format: 'float', example: 100000.00),
+        new OA\Property(property: 'balance_before', type: 'number', format: 'float', example: 0.00),
+        new OA\Property(property: 'balance_after', type: 'number', format: 'float', example: 100000.00),
+        new OA\Property(property: 'transaction_date', type: 'string', format: 'date-time', example: '2026-04-15T10:00:00Z'),
+        new OA\Property(property: 'description', type: 'string', nullable: true, example: 'Transaction description'),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2026-04-15T10:00:00Z'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2026-04-15T10:00:00Z')
     ]
 )]
 class OpenApiSpec

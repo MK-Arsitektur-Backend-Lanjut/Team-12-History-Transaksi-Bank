@@ -14,13 +14,13 @@ return new class extends Migration
             $table->string('reference_number', 40)->unique();
             $table->enum('type', ['debit', 'credit']);
             $table->decimal('amount', 18, 2);
-            $table->decimal('balance_before', 18, 2);
+            $table->decimal('balance_before', 18, 2)->nullable();
             $table->decimal('balance_after', 18, 2);
             $table->string('description')->nullable();
-            $table->timestamp('transacted_at');
+            $table->dateTime('transaction_date')->index();
             $table->timestamps();
 
-            $table->index(['account_id', 'transacted_at']);
+            $table->index(['account_id', 'transaction_date']);
             $table->index('type');
         });
     }
