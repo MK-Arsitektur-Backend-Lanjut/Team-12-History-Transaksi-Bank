@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
 use OpenApi\Attributes as OA;
@@ -56,30 +58,41 @@ class TransactionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'account_id' => ['required', 'integer', Rule::exists('accounts', 'id')],
-            'type' => ['required', Rule::in(['debit', 'credit'])],
-            'amount' => ['required', 'numeric', 'gt:0'],
-            'description' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'reference_number' => ['sometimes', 'nullable', 'string', 'max:191'],
+            'account_id' => 'required|integer',
+            'type' => 'required|in:debit,kredit',
+            'amount' => 'required|numeric|min:1',
         ]);
 
-        try {
-            $transaction = $this->service->create($validated);
+        return DB::transaction(function () use ($validated) {
+            // Ambil saldo terakhir
+            $last = Transaction::where('account_id', $validated['account_id'])
+                ->orderByDesc('id')->first();
+            $lastBalance = $last ? $last->balance_after : 0;
+
+            // Validasi saldo cukup jika debit
+            if ($validated['type'] === 'debit' && $lastBalance < $validated['amount']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Saldo tidak cukup.'
+                ], 422);
+            }
+
+            $newBalance = $validated['type'] === 'debit'
+                ? $lastBalance - $validated['amount']
+                : $lastBalance + $validated['amount'];
+
+            $transaction = Transaction::create([
+                'account_id' => $validated['account_id'],
+                'reference_number' => strtoupper(Str::uuid()),
+                'type' => $validated['type'],
+                'amount' => $validated['amount'],
+                'balance_after' => $newBalance,
+            ]);
 
             return response()->json([
                 'success' => true,
                 'transaction' => $transaction
-            ], 201);
-        } catch (\RuntimeException $e) {
-            $msg = $e->getMessage();
-
-            if (str_contains(strtolower($msg), 'not found')) {
-                return response()->json(['success' => false, 'message' => $msg], 404);
-            }
-
-            return response()->json(['success' => false, 'message' => $msg], 422);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Internal server error'], 500);
-        }
+            ]);
+        });
     }
 }
