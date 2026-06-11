@@ -125,6 +125,6 @@ return [
     |
     */
 
-    'serializable_classes' => false,
+    'serializable_classes' => env('CACHE_SERIALIZABLE_CLASSES', true),
 
 ];
