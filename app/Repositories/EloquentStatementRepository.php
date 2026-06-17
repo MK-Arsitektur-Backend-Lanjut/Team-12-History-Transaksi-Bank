@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Pagination\Paginator;
 
 class EloquentStatementRepository implements StatementRepositoryInterface
 {
@@ -32,7 +33,21 @@ class EloquentStatementRepository implements StatementRepositoryInterface
             ->select(['id', 'reference_number', $dateCol . ' as transaction_date', 'type', 'amount', 'balance_before', 'balance_after', 'description'])
             ->orderBy($dateCol, 'desc');
 
-        return $query->paginate($perPage);
+        // Resolve current page so cache keys include page number.
+        $currentPage = Paginator::resolveCurrentPage() ?: 1;
+
+        $cacheKey = sprintf('stmt:page:%d:%s:%s:page:%d:per:%d', $accountId, $startDate, $endDate, $currentPage, $perPage);
+
+        try {
+            $store = Cache::store('redis');
+
+            return $store->remember($cacheKey, now()->addSeconds(30), function () use ($query, $perPage) {
+                return $query->paginate($perPage);
+            });
+        } catch (\Throwable $e) {
+            // Fallback to direct paginate when Redis/cache isn't available.
+            return $query->paginate($perPage);
+        }
     }
 
     public function getSummaryTotals(int $accountId, string $startDate, string $endDate): array
