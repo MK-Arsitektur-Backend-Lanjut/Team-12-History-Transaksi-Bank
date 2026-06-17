@@ -541,6 +541,12 @@
                                         "example": 100000,
                                         "minimum": 0.01
                                     },
+                                    "description": {
+                                        "description": "Optional description",
+                                        "type": "string",
+                                        "example": "Payment for invoice",
+                                        "nullable": true
+                                    },
                                     "reference_number": {
                                         "description": "Idempotency key / external reference",
                                         "type": "string",

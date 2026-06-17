@@ -22,6 +22,7 @@ class Transaction extends Model
         'balance_after',
         'description',
         'transaction_date',
+        'latency_ms',
     ];
 
     protected $casts = [
@@ -29,9 +30,6 @@ class Transaction extends Model
         'balance_before' => 'decimal:2',
         'balance_after' => 'decimal:2',
         'transaction_date' => 'datetime',
-        'balance_before' => 'decimal:2',
-        'transaction_date' => 'datetime',
-        'transacted_at' => 'datetime',
     ];
 
     public function account(): BelongsTo
