@@ -4,17 +4,19 @@ namespace App\Services;
 
 use App\Events\TransactionCreated;
 use App\Models\Account;
-use App\Models\Transaction;
+use App\Repositories\Transaction\TransactionRepositoryInterface;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Str;
 
 class TransactionService
 {
     private DatabaseManager $db;
+    private TransactionRepositoryInterface $transactionRepository;
 
-    public function __construct(DatabaseManager $db)
+    public function __construct(DatabaseManager $db, TransactionRepositoryInterface $transactionRepository)
     {
         $this->db = $db;
+        $this->transactionRepository = $transactionRepository;
     }
 
     /**
@@ -23,9 +25,9 @@ class TransactionService
      * Tracks latency for monitoring purposes.
      *
      * @param array $payload keys: account_id, type ('debit'|'credit'), amount, description?, reference_number?, transaction_date?
-     * @return Transaction
+     * @return \App\Models\Transaction
      */
-    public function create(array $payload): Transaction
+    public function create(array $payload): \App\Models\Transaction
     {
         $startTime = microtime(true);
         $reference = $payload['reference_number'] ?? Str::upper(Str::uuid());
@@ -60,7 +62,7 @@ class TransactionService
             $account->balance = round($newBalance, 2);
             $account->save();
 
-            $tx = Transaction::create([
+            $tx = $this->transactionRepository->create([
                 'account_id' => $payload['account_id'],
                 'reference_number' => $reference,
                 'type' => $payload['type'],
@@ -78,7 +80,7 @@ class TransactionService
         $latencyMs = intval((microtime(true) - $startTime) * 1000);
         
         // Update transaction with latency
-        $transaction->update(['latency_ms' => $latencyMs]);
+        $this->transactionRepository->update($transaction, ['latency_ms' => $latencyMs]);
 
         // Dispatch event after successful commit
         event(new TransactionCreated($transaction));

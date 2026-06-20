@@ -1,4 +1,4 @@
-version: '3.8'
+#version: '3.8'
 
 services:
   app:
@@ -13,6 +13,8 @@ services:
       - ./:/var/www/html
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - team12_net
@@ -50,6 +52,22 @@ services:
       retries: 10
     networks:
       - team12_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: team12_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - team12_net
+    restart: unless-stopped
+
+
 
 volumes:
   dbdata:

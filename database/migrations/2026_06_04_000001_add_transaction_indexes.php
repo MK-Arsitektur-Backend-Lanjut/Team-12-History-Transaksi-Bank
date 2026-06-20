@@ -16,11 +16,16 @@ return new class extends Migration
         }
 
         Schema::table('transactions', function (Blueprint $table) {
+            // detect which date column exists (matches EloquentStatementRepository logic)
+            $dateCol = Schema::hasColumn('transactions', 'transaction_date')
+                ? 'transaction_date'
+                : (Schema::hasColumn('transactions', 'transacted_at') ? 'transacted_at' : 'created_at');
+
             // composite index for account + date (used by statements and aggregates)
-            $table->index(['account_id', 'transaction_date'], 'ix_transactions_account_transaction_date');
+            $table->index(['account_id', $dateCol], 'ix_transactions_account_date');
 
             // composite index for account + type + date (useful when filtering by type)
-            $table->index(['account_id', 'type', 'transaction_date'], 'ix_transactions_account_type_date');
+            $table->index(['account_id', 'type', $dateCol], 'ix_transactions_account_type_date');
 
             // composite index to speed up last-transaction lookups per account (account_id + id)
             $table->index(['account_id', 'id'], 'ix_transactions_account_id_id');
@@ -37,7 +42,7 @@ return new class extends Migration
         }
 
         Schema::table('transactions', function (Blueprint $table) {
-            $table->dropIndex('ix_transactions_account_transaction_date');
+            $table->dropIndex('ix_transactions_account_date');
             $table->dropIndex('ix_transactions_account_type_date');
             $table->dropIndex('ix_transactions_account_id_id');
         });

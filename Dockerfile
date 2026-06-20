@@ -10,7 +10,13 @@ RUN apt-get update \
         sqlite3 \
         libsqlite3-dev \
         libonig-dev \
-    && docker-php-ext-install pdo pdo_mysql pdo_sqlite zip intl opcache
+    && docker-php-ext-install pdo pdo_mysql pdo_sqlite zip intl opcache \
+    && pecl install redis \
+    && docker-php-ext-enable redis
+
+COPY docker/php/zz-docker.conf /usr/local/etc/php-fpm.d/zz-custom.conf
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+
 
 # install composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

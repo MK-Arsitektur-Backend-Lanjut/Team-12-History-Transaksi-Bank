@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('CACHE_STORE', 'database'),
+    'default' => env('CACHE_STORE', 'redis'),
 
     /*
     |--------------------------------------------------------------------------
@@ -125,6 +125,6 @@ return [
     |
     */
 
-    'serializable_classes' => false,
+    'serializable_classes' => true,
 
 ];

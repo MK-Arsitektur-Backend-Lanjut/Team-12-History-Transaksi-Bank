@@ -31,6 +31,7 @@ class TransactionController extends Controller
                     new OA\Property(property: 'account_id', type: 'integer', description: 'Account ID', example: 1),
                     new OA\Property(property: 'type', type: 'string', enum: ['debit', 'credit'], description: 'Transaction type', example: 'credit'),
                     new OA\Property(property: 'amount', type: 'number', format: 'float', description: 'Transaction amount', minimum: 0.01, example: 100000.00),
+                    new OA\Property(property: 'description', type: 'string', nullable: true, description: 'Optional description', example: 'Payment for invoice'),
                     new OA\Property(property: 'reference_number', type: 'string', description: 'Idempotency key / external reference', example: '4f0c4ae0-7b16-48d7-9488-5893710bbda8')
                 ]
             )
@@ -56,11 +57,9 @@ class TransactionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'account_id' => ['required', 'integer', Rule::exists('accounts', 'id')],
-            'type' => ['required', Rule::in(['debit', 'credit'])],
-            'amount' => ['required', 'numeric', 'gt:0'],
-            'description' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'reference_number' => ['sometimes', 'nullable', 'string', 'max:191'],
+            'account_id' => 'required|integer',
+            'type' => 'required|in:debit,kredit',
+            'amount' => 'required|numeric|min:1',
         ]);
 
         try {
@@ -68,18 +67,13 @@ class TransactionController extends Controller
 
             return response()->json([
                 'success' => true,
-                'transaction' => $transaction
+                'transaction' => $transaction,
             ], 201);
         } catch (\RuntimeException $e) {
-            $msg = $e->getMessage();
-
-            if (str_contains(strtolower($msg), 'not found')) {
-                return response()->json(['success' => false, 'message' => $msg], 404);
-            }
-
-            return response()->json(['success' => false, 'message' => $msg], 422);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Internal server error'], 500);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         }
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Account;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 class EloquentAccountRepository implements AccountRepositoryInterface
@@ -40,6 +41,9 @@ class EloquentAccountRepository implements AccountRepositoryInterface
     {
         $account->update($data);
 
+        try {
+            Cache::store('redis')->forget("account:profile:{$account->id}");
+        } catch (\Throwable $e) {}
         return $account->refresh();
     }
 
@@ -47,6 +51,9 @@ class EloquentAccountRepository implements AccountRepositoryInterface
     {
         $account->status = $status;
         $account->save();
+        try {
+            Cache::store('redis')->forget("account:profile:{$account->id}");
+        } catch (\Throwable $e) {}
 
         return $account->refresh();
     }
@@ -80,6 +87,10 @@ class EloquentAccountRepository implements AccountRepositoryInterface
 
             $account->balance = round($newBalance, 2);
             $account->save();
+
+            try {
+                Cache::store('redis')->forget("account:profile:{$accountId}");
+            } catch (\Throwable $e) {}
 
             return $account->refresh();
         });
