@@ -44,7 +44,7 @@ class TransactionLoadSeeder extends Seeder
                     'balance_before' => round($balanceBefore, 2),
                     'balance_after' => round($currentBalance, 2),
                     'description' => Str::title($type) . ' transaction seed #' . $sequence,
-                    'transacted_at' => now()->subSeconds($transactionsPerAccount - $sequence),
+                    'transaction_date' => now()->subSeconds($transactionsPerAccount - $sequence),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];

@@ -1,15 +1,17 @@
 <?php
-// filepath: d:\Kuliah\Semester 8\Arsitektur & Pengembangan Backend\modul-account-management\app\Repositories\Account\EloquentAccountRepository.php
 
 namespace App\Repositories\Account;
 
 use App\Models\Account;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class EloquentAccountRepository implements AccountRepositoryInterface
 {
+    private const CACHE_TTL_SECONDS = 3600;
+
     public function paginate(int $perPage = 15): LengthAwarePaginator
     {
         return Account::query()->latest()->paginate($perPage);
@@ -17,14 +19,14 @@ class EloquentAccountRepository implements AccountRepositoryInterface
 
     public function findById(int $id): ?Account
     {
-        return \Illuminate\Support\Facades\Cache::remember("account:id:{$id}", 3600, function () use ($id) {
+        return $this->rememberAccount("account:id:{$id}", function () use ($id) {
             return Account::query()->find($id);
         });
     }
 
     public function findByAccountNumber(string $accountNumber): ?Account
     {
-        return \Illuminate\Support\Facades\Cache::remember("account:number:{$accountNumber}", 3600, function () use ($accountNumber) {
+        return $this->rememberAccount("account:number:{$accountNumber}", function () use ($accountNumber) {
             return Account::query()->where('account_number', $accountNumber)->first();
         });
     }
@@ -37,6 +39,7 @@ class EloquentAccountRepository implements AccountRepositoryInterface
     public function update(Account $account, array $data): Account
     {
         $account->update($data);
+
         return $account->refresh();
     }
 
@@ -80,5 +83,30 @@ class EloquentAccountRepository implements AccountRepositoryInterface
 
             return $account->refresh();
         });
+    }
+
+    private function rememberAccount(string $key, callable $resolver): ?Account
+    {
+        $cached = Cache::get($key);
+
+        if ($cached instanceof Account) {
+            return $cached;
+        }
+
+        if (is_array($cached)) {
+            return (new Account)->newFromBuilder($cached);
+        }
+
+        if ($cached !== null) {
+            Cache::forget($key);
+        }
+
+        $account = $resolver();
+
+        if ($account !== null) {
+            Cache::put($key, $account->getAttributes(), self::CACHE_TTL_SECONDS);
+        }
+
+        return $account;
     }
 }
