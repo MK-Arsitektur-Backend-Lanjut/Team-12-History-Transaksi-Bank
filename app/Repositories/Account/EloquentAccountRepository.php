@@ -6,7 +6,6 @@ use App\Models\Account;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 class EloquentAccountRepository implements AccountRepositoryInterface
