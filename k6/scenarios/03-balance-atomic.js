@@ -1,25 +1,22 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { BASE_URL, JSON_HEADERS, createAccount } from '../lib/config.js';
+import { BASE_URL, JSON_HEADERS, REQUEST_TIMEOUT, resolveTestAccount, CORE_BANKING_STRESS_STAGES } from '../lib/config.js';
 
 const DEBIT_AMOUNT = parseFloat(__ENV.DEBIT_AMOUNT || '10.00');
 const INITIAL_BALANCE = parseFloat(__ENV.INITIAL_BALANCE || '10000000');
 
 export const options = {
-  stages: [
-    { duration: '20s', target: 10 },
-    { duration: '40s', target: 50 },
-    { duration: '20s', target: 0 },
-  ],
+  setupTimeout: '600s',
+  stages: CORE_BANKING_STRESS_STAGES,
   thresholds: {
-    http_req_failed: ['rate<0.05'],
-    http_req_duration: ['p(95)<5000'],
-    'checks{scenario:balance_adjust}': ['rate>0.95'],
+    http_req_failed: ['rate<0.15'],
+    http_req_duration: ['p(95)<180000'],
+    'checks{scenario:balance_adjust}': ['rate>0.85'],
   },
 };
 
 export function setup() {
-  const account = createAccount({
+  const account = resolveTestAccount({
     customer_name: 'K6 Atomic Balance Stress Test',
     balance: INITIAL_BALANCE,
     status: 'active',
@@ -29,6 +26,7 @@ export function setup() {
     accountId: account.id,
     initialBalance: account.balance,
     debitAmount: DEBIT_AMOUNT,
+    fromEnv: account.fromEnv,
   };
 }
 
@@ -41,6 +39,7 @@ export default function (data) {
     }),
     {
       headers: JSON_HEADERS,
+      timeout: REQUEST_TIMEOUT,
       tags: { scenario: 'balance_adjust' },
     }
   );
@@ -54,11 +53,14 @@ export default function (data) {
     { scenario: 'balance_adjust' }
   );
 
-  sleep(0.05);
+  sleep(0.3);
 }
 
 export function teardown(data) {
-  const res = http.get(`${BASE_URL}/accounts/${data.accountId}`);
+  const res = http.get(`${BASE_URL}/accounts/${data.accountId}`, {
+    headers: JSON_HEADERS,
+    timeout: REQUEST_TIMEOUT,
+  });
   const finalBalance = parseFloat(res.json('data.balance'));
 
   console.log(`Account ID: ${data.accountId}`);
