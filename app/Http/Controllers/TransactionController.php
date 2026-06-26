@@ -57,11 +57,9 @@ class TransactionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'account_id' => ['required', 'integer', Rule::exists('accounts', 'id')],
-            'type' => ['required', Rule::in(['debit', 'credit'])],
-            'amount' => ['required', 'numeric', 'gt:0'],
-            'description' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'reference_number' => ['sometimes', 'nullable', 'string', 'max:191'],
+            'account_id' => 'required|integer',
+            'type' => 'required|in:debit,kredit',
+            'amount' => 'required|numeric|min:1',
         ]);
 
         try {
